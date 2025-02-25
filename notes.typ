@@ -38,7 +38,6 @@
 }
 
 #let tcounter = counter("counter")
-#show heading: reset-counter(tcounter, levels: 2)
 #let problem = mathblock(
   blocktitle: "Problem",
   counter: tcounter,
