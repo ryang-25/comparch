@@ -12,6 +12,7 @@
 #set heading(numbering: none)
 #set enum(indent: 1em, numbering: "a)")
 #set list(indent: 1em)
+#let problem = problem.with(inset: 0em, stroke: none, breakable: true)
 
 == Case Study 1
 

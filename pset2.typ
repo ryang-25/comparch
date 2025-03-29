@@ -47,13 +47,12 @@ Assume that both the input and output matrices are stored in the row major order
 (row major order means that the row index changes fastest). Assume that you are
 executing a 256-256 double-precision transpose on a processor with a 16 KB fully
 associative (don’t worry about cache conflicts) least recently used (LRU)
-replacement L1 data cache with 64-byte blocks. Assume that the L1 cache misses or prefetches
-require 16 cycles and always hit in the L2 cache, and that the L2 cache can
-process a request every 2 processor cycles. Assume that each iteration of the
+replacement L1 data cache with 64-byte blocks. Assume that the L1 cache misses or
+prefetches require 16 cycles and always hit in the L2 cache, and that the L2 cache
+can process a request every 2 processor cycles. Assume that each iteration of the
 preceding inner loop requires 4 cycles if the data are present in the L1 cache.
 Assume that the cache has a write-allocate fetch-on-write policy for write misses.
 Unrealistically, assume that writing back dirty cache blocks requires 0 cycles.
-
 
 #problem[
   For the preceding simple implementation, this execution
@@ -96,7 +95,60 @@ Unrealistically, assume that writing back dirty cache blocks requires 0 cycles.
     ```
   + They should be 2-way associative to avoid cache lines being allocated to the
     same region in cache.
-  + With a 128 KiB 8-way L1D the blocked version took ~150 microseconds vs 600
-    microseconds for the non-blocking. Using a smaller or larger block increased
-    the time, however.
+  + With a 64 byte cacheline (in a 128 KiB 8-way L1D) the blocked version took
+    \~150 microseconds vs 600 microseconds for the non-blocking. Using a smaller
+    or larger block increased the time, however.
+]
+
+#problem[
+  Assume you are designing a hardware prefetcher for the preceding unblocked
+  matrix transposition code. The simplest type of hardware prefetcher only
+  prefetches sequential cache blocks after a miss. More complicated "nonunit
+  stride" hardware prefetchers can analyze a miss reference stream and detect
+  and prefetch nonunit strides. In contrast, software prefetching can determine
+  nonunit strides as easily as it can determine unit strides. Assume prefetches
+  write directly into the cache and that there is no "pollution" (overwriting
+  data that must be used before the data that are prefetched). For best
+  performance given a nonunit stride prefetcher, in the steady state of the
+  inner loop, how many prefetches must be outstanding at a given time?
+]
+
+#solution[
+  Since the L2 needs two cycles to process a request and we have 8 column misses
+  per iteration, where a prefetch has a latency of 16 cycles, we can have at most
+  16/2 = 8 prefetches (the max) outstanding.
+]
+
+#problem[
+  With software prefetching, it is important to be careful to have the
+  prefetches occur in time for use but also to minimize the number of
+  outstanding prefetches to live within the capabilities of the
+  microarchitecture and minimize cache pollution. This is complicated by the
+  fact that different processors have different capabilities and limitations.
+  + Create a blocked version of the matrix transpose with software
+    prefetching.
+  + Estimate and compare the performance of the blocked and
+    unblocked transpose codes both with and without software prefetching.
+]
+
+#solution[
+  + Assuming the branch predictor predicts correctly most of the time we only
+    really have a mispredict on the last loop, which is acceptable.
+
+    _An alternative:_ pad the rest of the array to avoid branch predictor
+    penalty altogether, but this causes array to be larget and nullifies any
+    gains we obtain from trying to make everything fit in cache :(
+    ```c
+    for (int i = 0; i < 256; i += B)
+      for (int j = 0; j < 256; j += B) {
+        int next = j + B < 256 ? j + B : j;
+        __builtin_prefetch(input[i][next], 0, 0);
+        __builtin_prefetch(output[next][i], 1, 0);
+        for (int k = 0; k < B; k++)
+          for (int l = 0; l < B; l++)
+            output[j + l][i + k] = input[i + k][j + l];
+      }
+    ```
+  + Benchmarking shows that prefetching no noticeable improvement (and in most
+    cases turns out to be slower). Is my computer too superscalar and OOO?
 ]
