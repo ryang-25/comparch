@@ -387,7 +387,7 @@ latencies.
 ]
 
 #problem[
-  f you ever get confused about what a register renamer has to do, go
+  If you ever get confused about what a register renamer has to do, go
   back to the assembly code you’re executing, and ask yourself what has to happen
   for the right result to be obtained. For example, consider a three-way superscalar
   machine renaming these three instructions concurrently:
